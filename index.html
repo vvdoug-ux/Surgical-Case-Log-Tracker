@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surgical Case Log - Cataract & Glaucoma</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        teal: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        slate: {
+                            850: '#1e293b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .va-input-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .va-prefix {
+            position: absolute;
+            left: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            user-select: none;
+            pointer-events: none;
+        }
+        .va-input {
+            padding-left: 2.75rem !important;
+        }
+        /* Hide scrollbars for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-teal-500 p-2 rounded-lg text-slate-900">
+                        <i class="fa-solid fa-eye text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">OphthaLog</h1>
+                        <p class="text-xs text-teal-400">Cataract & Glaucoma Surgical Tracker</p>
+                    </div>
+                </div>
+
+                <!-- Main Navigation Tabs -->
+                <nav class="flex space-x-1 sm:space-x-2">
+                    <button onclick="switchTab('case-log')" id="nav-case-log" class="nav-btn px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 bg-teal-600 text-white shadow">
+                        <i class="fa-solid fa-folder-open mr-2"></i>Case Log
+                    </button>
+                    <button onclick="switchTab('progress')" id="nav-progress" class="nav-btn px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-chart-line mr-2"></i>Progress
+                    </button>
+                    <button onclick="switchTab('search')" id="nav-search" class="nav-btn px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-magnifying-glass mr-2"></i>Search
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Body Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ==================== TAB 1: CASE LOG ==================== -->
+        <section id="tab-case-log" class="tab-content block space-y-6">
+
+            <!-- Top Header & Patient Case Navigation Selector -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <span class="text-xs font-semibold text-teal-600 uppercase tracking-wider">Patient Case File</span>
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <span>Case #<span id="display-case-num">--</span></span>
+                            <span id="badge-patient-id" class="text-sm font-normal text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">Patient ID: --</span>
+                        </h2>
+                    </div>
+
+                    <!-- Actions & Case Selector -->
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <div class="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                            <label for="select-active-case" class="text-xs font-medium text-slate-600 pl-2">Select Case:</label>
+                            <select id="select-active-case" onchange="onCaseSelectChange(this.value)" class="bg-white text-sm font-semibold text-slate-800 border border-slate-300 rounded px-2 py-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                                <!-- Options populated dynamically -->
+                            </select>
+                        </div>
+
+                        <button onclick="createNewCaseForCurrentPatient()" title="Start new case for this patient" class="bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-plus text-teal-400"></i> New Case for Patient
+                        </button>
+                        
+                        <button onclick="createNewBlankPatientCase()" title="Create entirely new patient file" class="bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-medium px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-user-plus"></i> New Patient
+                        </button>
+
+                        <button onclick="promptDeleteCurrentCase()" title="Delete current case file" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs sm:text-sm font-medium px-3 py-2 rounded-lg transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Case Information Form Controls -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-4 pt-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Case #</label>
+                        <input type="number" id="input-case-number" onchange="updateCaseHeaderInfo()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Patient ID</label>
+                        <input type="number" id="input-patient-id" onchange="updateCaseHeaderInfo()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">DOB</label>
+                        <input type="date" id="input-dob" onchange="saveCurrentCaseData()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gender</label>
+                        <select id="input-gender" onchange="saveCurrentCaseData()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                            <option value="M">Male (M)</option>
+                            <option value="F">Female (F)</option>
+                            <option value="X">Other (X)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Surgery Date</label>
+                        <input type="date" id="input-surgery-date" onchange="saveCurrentCaseData()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Eye</label>
+                        <select id="input-eye" onchange="saveCurrentCaseData()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                            <option value="OD">OD (Right)</option>
+                            <option value="OS">OS (Left)</option>
+                            <option value="OU">OU (Both)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Diagnosis</label>
+                        <select id="input-diagnosis" onchange="saveCurrentCaseData()" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none">
+                            <option value="Cataract">Cataract</option>
+                            <option value="Glaucoma">Glaucoma</option>
+                            <option value="C+G">C+G</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workflow Sub-Tabs Container -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <!-- Workflow Tabs Nav -->
+                <div class="flex border-b border-slate-200 bg-slate-50">
+                    <button onclick="switchSubTab('pre-op')" id="subnav-pre-op" class="subnav-btn flex-1 py-3 px-4 font-semibold text-sm text-center border-b-2 border-teal-600 text-teal-700 bg-white transition-all">
+                        <i class="fa-solid fa-clipboard-check mr-2"></i>1. Pre-op
+                    </button>
+                    <button onclick="switchSubTab('intra-op')" id="subnav-intra-op" class="subnav-btn flex-1 py-3 px-4 font-semibold text-sm text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all">
+                        <i class="fa-solid fa-syringe mr-2"></i>2. Intra-op
+                    </button>
+                    <button onclick="switchSubTab('post-op')" id="subnav-post-op" class="subnav-btn flex-1 py-3 px-4 font-semibold text-sm text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all">
+                        <i class="fa-solid fa-heart-pulse mr-2"></i>3. Post-op & Tracking
+                    </button>
+                </div>
+
+                <!-- Sub-Tab Content Area -->
+                <div class="p-6">
+
+                    <!-- SUB-TAB: PRE-OP -->
+                    <div id="subtab-pre-op" class="subtab-content space-y-6">
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center gap-2">
+                            <span class="bg-teal-100 text-teal-800 text-xs px-2 py-0.5 rounded">Baseline</span> Baseline Assessment
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">IOP (mmHg)</label>
+                                <div class="relative">
+                                    <input type="number" id="preop-iop" step="0.1" onchange="syncPreopToPostop(); saveCurrentCaseData();" placeholder="e.g. 18" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                    <span class="absolute right-3 top-2 text-xs text-slate-400">mmHg</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">VA (Snellen)</label>
+                                <div class="va-input-container w-full">
+                                    <span class="va-prefix">20/</span>
+                                    <input type="number" id="preop-va" onchange="syncPreopToPostop(); saveCurrentCaseData();" placeholder="40" class="va-input w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Glaucoma Meds</label>
+                                <input type="number" id="preop-meds" min="0" onchange="syncPreopToPostop(); saveCurrentCaseData();" placeholder="e.g. 2" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Sub-section: Biometry -->
+                        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 mt-6 space-y-4">
+                            <h4 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-ruler-combined text-teal-600"></i> Biometry
+                            </h4>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">AXL (mm)</label>
+                                    <input type="number" id="biometry-axl" step="0.01" onchange="saveCurrentCaseData()" placeholder="e.g. 23.45" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">ACD (mm)</label>
+                                    <input type="number" id="biometry-acd" step="0.01" onchange="saveCurrentCaseData()" placeholder="e.g. 3.12" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Aim</label>
+                                    <input list="aim-options" id="biometry-aim" onchange="saveCurrentCaseData()" placeholder="Type or select..." class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                    <datalist id="aim-options">
+                                        <option value="distance"></option>
+                                        <option value="near"></option>
+                                        <option value="intermediate"></option>
+                                    </datalist>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Implant (D)</label>
+                                    <input type="text" id="biometry-implant" onchange="formatSignedInput(this); saveCurrentCaseData();" placeholder="e.g. +21.5" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-TAB: INTRA-OP -->
+                    <div id="subtab-intra-op" class="subtab-content hidden space-y-6">
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center gap-2">
+                            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded">Procedure</span> Surgical Procedure Details
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Procedures Performed</label>
+                                <select id="intraop-procedure" onchange="saveCurrentCaseData()" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                    <option value="CEIOL">CEIOL</option>
+                                    <option value="phaco + MIGS">phaco + MIGS</option>
+                                    <option value="MIGS">MIGS</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">MIGS type</label>
+                                <select id="intraop-migs" onchange="saveCurrentCaseData()" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                    <option value="None">None / N/A</option>
+                                    <option value="Hydrus">Hydrus</option>
+                                    <option value="OMNI">OMNI</option>
+                                    <option value="VIA360">VIA360</option>
+                                    <option value="iTrack">iTrack</option>
+                                    <option value="KDB">KDB</option>
+                                    <option value="ECP">ECP</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Notes:</label>
+                            <textarea id="intraop-notes" rows="4" onchange="saveCurrentCaseData()" placeholder="Enter intraoperative findings, incision size, lens model, or complications..." class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- SUB-TAB: POST-OP -->
+                    <div id="subtab-post-op" class="subtab-content hidden space-y-6">
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded">Follow-up</span> Interactive Longitudinal Chart
+                            </span>
+                            <span class="text-xs font-normal text-slate-400"><i class="fa-solid fa-info-circle mr-1"></i>Pre-op syncs automatically</span>
+                        </h3>
+
+                        <!-- Longitudinal Post-op Chart Table -->
+                        <div class="overflow-x-auto border border-slate-200 rounded-xl shadow-sm">
+                            <table class="w-full text-left text-sm text-slate-700 border-collapse">
+                                <thead class="bg-slate-100 text-xs font-bold text-slate-600 uppercase border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-3 px-4 w-44 bg-slate-100">Metric</th>
+                                        <th class="py-3 px-4 text-center bg-teal-50/50">Pre-op</th>
+                                        <th class="py-3 px-4 text-center">Day 1</th>
+                                        <th class="py-3 px-4 text-center">Month 1</th>
+                                        <th class="py-3 px-4 text-center">Month 3</th>
+                                        <th class="py-3 px-4 text-center">Year 1</th>
+                                        <th class="py-3 px-4 text-center">Year 3</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 bg-white">
+                                    <!-- Row 1: IOP -->
+                                    <tr>
+                                        <td class="py-3 px-4 font-semibold text-slate-800 bg-slate-50">IOP (mmHg)</td>
+                                        <td class="p-2 bg-teal-50/30"><input type="number" step="0.1" id="chart-iop-pre" readonly class="w-full text-center bg-slate-100 text-slate-500 font-semibold border border-slate-200 rounded py-1 cursor-not-allowed"></td>
+                                        <td class="p-2"><input type="number" step="0.1" id="chart-iop-d1" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" step="0.1" id="chart-iop-m1" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" step="0.1" id="chart-iop-m3" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" step="0.1" id="chart-iop-y1" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" step="0.1" id="chart-iop-y3" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                    </tr>
+                                    <!-- Row 2: VA -->
+                                    <tr>
+                                        <td class="py-3 px-4 font-semibold text-slate-800 bg-slate-50">VA (Snellen)</td>
+                                        <td class="p-2 bg-teal-50/30">
+                                            <div class="va-input-container w-full">
+                                                <span class="va-prefix text-xs">20/</span>
+                                                <input type="number" id="chart-va-pre" readonly class="va-input w-full text-center bg-slate-100 text-slate-500 font-semibold border border-slate-200 rounded py-1 cursor-not-allowed">
+                                            </div>
+                                        </td>
+                                        <td class="p-2">
+                                            <div class="va-input-container w-full">
+                                                <span class="va-prefix text-xs">20/</span>
+                                                <input type="number" id="chart-va-d1" onchange="saveCurrentCaseData()" class="va-input w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                                            </div>
+                                        </td>
+                                        <td class="p-2">
+                                            <div class="va-input-container w-full">
+                                                <span class="va-prefix text-xs">20/</span>
+                                                <input type="number" id="chart-va-m1" onchange="saveCurrentCaseData()" class="va-input w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                                            </div>
+                                        </td>
+                                        <td class="p-2">
+                                            <div class="va-input-container w-full">
+                                                <span class="va-prefix text-xs">20/</span>
+                                                <input type="number" id="chart-va-m3" onchange="saveCurrentCaseData()" class="va-input w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                                            </div>
+                                        </td>
+                                        <td class="p-2">
+                                            <div class="va-input-container w-full">
+                                                <span class="va-prefix text-xs">20/</span>
+                                                <input type="number" id="chart-va-y1" onchange="saveCurrentCaseData()" class="va-input w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                                            </div>
+                                        </td>
+                                        <td class="p-2">
+                                            <div class="va-input-container w-full">
+                                                <span class="va-prefix text-xs">20/</span>
+                                                <input type="number" id="chart-va-y3" onchange="saveCurrentCaseData()" class="va-input w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 3: SE (D) -->
+                                    <tr>
+                                        <td class="py-3 px-4 font-semibold text-slate-800 bg-slate-50">SE (D)</td>
+                                        <!-- Pre-op (Disabled) -->
+                                        <td class="p-2 bg-slate-100 text-center text-xs text-slate-400 font-medium">Inactive</td>
+                                        <!-- Day 1 (Disabled) -->
+                                        <td class="p-2 bg-slate-100 text-center text-xs text-slate-400 font-medium">Inactive</td>
+                                        <!-- Month 1 (Active) -->
+                                        <td class="p-2"><input type="text" id="chart-se-m1" onchange="formatSignedInput(this); saveCurrentCaseData();" placeholder="±0.00" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <!-- Month 3 (Disabled) -->
+                                        <td class="p-2 bg-slate-100 text-center text-xs text-slate-400 font-medium">Inactive</td>
+                                        <!-- Year 1 (Disabled) -->
+                                        <td class="p-2 bg-slate-100 text-center text-xs text-slate-400 font-medium">Inactive</td>
+                                        <!-- Year 3 (Disabled) -->
+                                        <td class="p-2 bg-slate-100 text-center text-xs text-slate-400 font-medium">Inactive</td>
+                                    </tr>
+                                    <!-- Row 4: Glaucoma Meds -->
+                                    <tr>
+                                        <td class="py-3 px-4 font-semibold text-slate-800 bg-slate-50">Glaucoma Meds</td>
+                                        <td class="p-2 bg-teal-50/30"><input type="number" id="chart-meds-pre" readonly class="w-full text-center bg-slate-100 text-slate-500 font-semibold border border-slate-200 rounded py-1 cursor-not-allowed"></td>
+                                        <!-- Day 1 (Disabled) -->
+                                        <td class="p-2 bg-slate-100 text-center text-xs text-slate-400 font-medium">Inactive</td>
+                                        <td class="p-2"><input type="number" min="0" id="chart-meds-m1" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" min="0" id="chart-meds-m3" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" min="0" id="chart-meds-y1" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                        <td class="p-2"><input type="number" min="0" id="chart-meds-y3" onchange="saveCurrentCaseData()" class="w-full text-center border border-slate-300 rounded py-1 focus:ring-2 focus:ring-teal-500 outline-none"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Complications Section -->
+                        <div class="pt-4 border-t border-slate-200">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Complications</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <input list="complications-list" id="postop-complications" onchange="handleComplicationsChange()" placeholder="Select or type..." class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                                    <datalist id="complications-list">
+                                        <option value="Uneventful Recovery"></option>
+                                        <option value="IOP Spike"></option>
+                                        <option value="Refractive Surprise"></option>
+                                        <option value="Other"></option>
+                                    </datalist>
+                                </div>
+                                <div id="complications-other-container" class="hidden">
+                                    <textarea id="postop-complications-other" rows="3" onchange="saveCurrentCaseData()" placeholder="Specify additional details regarding 'Other' complication..." class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==================== TAB 2: PROGRESS (ANALYTICS) ==================== -->
+        <section id="tab-progress" class="tab-content hidden space-y-6">
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Post-Op Progress & Longitudinal Trends</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Visualize IOP, Visual Acuity, and Medication burden across post-op intervals.</p>
+                    </div>
+
+                    <!-- Graph Controls & Filters -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Mode Selector -->
+                        <div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold">
+                            <button id="graph-mode-all" onclick="setGraphMode('all')" class="px-3 py-1.5 rounded-md bg-white text-teal-700 shadow-sm">All Cases Avg</button>
+                            <button id="graph-mode-filter" onclick="setGraphMode('filter')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">Filtered Avg</button>
+                            <button id="graph-mode-single" onclick="setGraphMode('single')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">Single Case</button>
+                        </div>
+
+                        <!-- Single Case Dropdown -->
+                        <select id="graph-single-case-select" onchange="renderCharts()" class="hidden text-xs font-semibold bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:ring-2 focus:ring-teal-500 outline-none">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filter Controls Bar (Visible in Filter Mode) -->
+                <div id="graph-filters-bar" class="hidden grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-4 bg-slate-50 p-4 rounded-xl border border-slate-200 my-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gender</label>
+                        <select id="filter-gender" onchange="renderCharts()" class="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option value="">All Genders</option>
+                            <option value="M">Male (M)</option>
+                            <option value="F">Female (F)</option>
+                            <option value="X">Other (X)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Diagnosis</label>
+                        <select id="filter-diagnosis" onchange="renderCharts()" class="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option value="">All Diagnoses</option>
+                            <option value="Cataract">Cataract</option>
+                            <option value="Glaucoma">Glaucoma</option>
+                            <option value="C+G">C+G</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Procedure</label>
+                        <select id="filter-procedure" onchange="renderCharts()" class="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option value="">All Procedures</option>
+                            <option value="CEIOL">CEIOL</option>
+                            <option value="phaco + MIGS">phaco + MIGS</option>
+                            <option value="MIGS">MIGS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Eye</label>
+                        <select id="filter-eye" onchange="renderCharts()" class="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option value="">All Eyes</option>
+                            <option value="OD">OD</option>
+                            <option value="OS">OS</option>
+                            <option value="OU">OU</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Age Group</label>
+                        <select id="filter-age" onchange="renderCharts()" class="w-full text-xs bg-white border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option value="">All Ages</option>
+                            <option value="under60">&lt; 60 yrs</option>
+                            <option value="60to75">60 - 75 yrs</option>
+                            <option value="over75">&gt; 75 yrs</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Three Line Graphs Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
+                    <!-- Graph 1: IOP -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-sm font-bold text-slate-800">IOP (mmHg)</h4>
+                            <span class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded font-medium">Lower is better</span>
+                        </div>
+                        <div class="relative h-64 w-full">
+                            <canvas id="chart-iop-canvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Graph 2: VA (Denominator) -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-sm font-bold text-slate-800">VA (Snellen Denominator 20/X)</h4>
+                            <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">Lower is better</span>
+                        </div>
+                        <div class="relative h-64 w-full">
+                            <canvas id="chart-va-canvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Graph 3: Glaucoma Meds -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-sm font-bold text-slate-800">Glaucoma Meds Count</h4>
+                            <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">Count</span>
+                        </div>
+                        <div class="relative h-64 w-full">
+                            <canvas id="chart-meds-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==================== TAB 3: SEARCH & FILTER ==================== -->
+        <section id="tab-search" class="tab-content hidden space-y-6">
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="pb-6 border-b border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-900 mb-1">Search & Filter Surgical Cases</h2>
+                    <p class="text-xs text-slate-500 mb-4">Find individual records by Patient ID, DOB, Surgery Date, Diagnosis, Procedure, or Eye.</p>
+                    
+                    <!-- Search Input Field -->
+                    <div class="relative max-w-xl">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="search-query-input" onkeyup="renderSearchResults()" placeholder="Search by Patient ID, Case #, DOB, Diagnosis, Procedure..." class="w-full text-sm pl-9 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                </div>
+
+                <!-- Search Results Table -->
+                <div class="mt-6 overflow-x-auto border border-slate-200 rounded-xl shadow-sm">
+                    <table class="w-full text-left text-sm text-slate-700">
+                        <thead class="bg-slate-100 text-xs font-bold text-slate-600 uppercase border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4">Case #</th>
+                                <th class="py-3 px-4">Patient ID</th>
+                                <th class="py-3 px-4">DOB</th>
+                                <th class="py-3 px-4">Gender</th>
+                                <th class="py-3 px-4">Surgery Date</th>
+                                <th class="py-3 px-4">Eye</th>
+                                <th class="py-3 px-4">Diagnosis</th>
+                                <th class="py-3 px-4">Procedure</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="search-results-tbody" class="divide-y divide-slate-200 bg-white">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Confirmation Modal for Safe Case Deletion -->
+    <div id="delete-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex items-center gap-3 text-rose-600">
+                <div class="bg-rose-100 p-2.5 rounded-full">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">Confirm Case Deletion</h3>
+            </div>
+            <p class="text-sm text-slate-600">
+                Are you sure you want to delete <strong id="delete-modal-case-text">Case #--</strong>? This action cannot be undone.
+            </p>
+            <div class="flex items-center justify-end space-x-3 pt-2">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+                <button onclick="confirmDeleteCase()" class="px-4 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-colors">Delete Case</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script>
+        // Default seed data for immediate interactivity
+        const INITIAL_DEMO_CASES = [
+            {
+                caseNum: 101,
+                patientId: 5001,
+                dob: "1954-04-12",
+                gender: "M",
+                surgeryDate: "2024-01-15",
+                eye: "OD",
+                diagnosis: "C+G",
+                preop: { iop: 24, va: 60, meds: 3, axl: 23.85, acd: 3.10, aim: "distance", implant: "+21.5" },
+                intraop: { procedure: "phaco + MIGS", migs: "Hydrus", notes: "Uneventful phacoemulsification with Hydrus stent insertion." },
+                postop: {
+                    iop: { pre: 24, d1: 18, m1: 15, m3: 14, y1: 14, y3: 15 },
+                    va: { pre: 60, d1: 40, m1: 25, m3: 20, y1: 20, y3: 25 },
+                    se: { m1: "-0.25" },
+                    meds: { pre: 3, m1: 1, m3: 1, y1: 1, y3: 1 },
+                    complications: "Uneventful Recovery",
+                    complicationsOther: ""
+                }
+            },
+            {
+                caseNum: 102,
+                patientId: 5001,
+                dob: "1954-04-12",
+                gender: "M",
+                surgeryDate: "2024-03-20",
+                eye: "OS",
+                diagnosis: "Cataract",
+                preop: { iop: 16, va: 80, meds: 0, axl: 23.90, acd: 3.15, aim: "distance", implant: "+21.0" },
+                intraop: { procedure: "CEIOL", migs: "None", notes: "Standard CEIOL with bag placement." },
+                postop: {
+                    iop: { pre: 16, d1: 17, m1: 14, m3: 15, y1: 14, y3: 14 },
+                    va: { pre: 80, d1: 30, m1: 20, m3: 20, y1: 20, y3: 20 },
+                    se: { m1: "+0.00" },
+                    meds: { pre: 0, m1: 0, m3: 0, y1: 0, y3: 0 },
+                    complications: "Uneventful Recovery",
+                    complicationsOther: ""
+                }
+            },
+            {
+                caseNum: 103,
+                patientId: 5002,
+                dob: "1962-09-05",
+                gender: "F",
+                surgeryDate: "2024-02-10",
+                eye: "OD",
+                diagnosis: "Glaucoma",
+                preop: { iop: 28, va: 30, meds: 4, axl: 22.40, acd: 2.95, aim: "near", implant: "+24.0" },
+                intraop: { procedure: "MIGS", migs: "OMNI", notes: "360 degree canaloplasty & trabeculotomy." },
+                postop: {
+                    iop: { pre: 28, d1: 22, m1: 17, m3: 16, y1: 15, y3: 16 },
+                    va: { pre: 30, d1: 40, m1: 25, m3: 20, y1: 25, y3: 25 },
+                    se: { m1: "-1.50" },
+                    meds: { pre: 4, m1: 2, m3: 1, y1: 1, y3: 2 },
+                    complications: "IOP Spike",
+                    complicationsOther: "Transient Day 1 spike resolved with oral Diamox."
+                }
+            }
+        ];
+
+        // Global State Variables
+        let casesData = [];
+        let currentCaseNum = null;
+        let caseToDeleteNum = null;
+        let activeTab = 'case-log';
+        let activeSubTab = 'pre-op';
+        let graphMode = 'all'; // 'all', 'filter', 'single'
+
+        // Chart instances
+        let iopChartInstance = null;
+        let vaChartInstance = null;
+        let medsChartInstance = null;
+
+        // Initialize Application
+        window.onload = function() {
+            loadCasesFromStorage();
+            if (casesData.length === 0) {
+                casesData = JSON.parse(JSON.stringify(INITIAL_DEMO_CASES));
+                saveCasesToStorage();
+            }
+
+            // Set default view to highest case number
+            selectHighestCaseOrDefault();
+            switchTab('case-log');
+            switchSubTab('pre-op');
+        };
+
+        // Storage Management
+        function loadCasesFromStorage() {
+            const dataStr = localStorage.getItem('ophtha_cases_data');
+            if (dataStr) {
+                try {
+                    casesData = JSON.parse(dataStr);
+                } catch(e) {
+                    casesData = [];
+                }
+            }
+        }
+
+        function saveCasesToStorage() {
+            localStorage.setItem('ophtha_cases_data', JSON.stringify(casesData));
+        }
+
+        // Auto-select highest Case # by default
+        function selectHighestCaseOrDefault(patientId = null) {
+            if (casesData.length === 0) {
+                createNewBlankPatientCase();
+                return;
+            }
+
+            let eligibleCases = casesData;
+            if (patientId !== null) {
+                eligibleCases = casesData.filter(c => c.patientId == patientId);
+            }
+
+            if (eligibleCases.length === 0) {
+                eligibleCases = casesData;
+            }
+
+            // Sort descending by caseNum to find highest
+            eligibleCases.sort((a, b) => b.caseNum - a.caseNum);
+            currentCaseNum = eligibleCases[0].caseNum;
+            
+            populateCaseSelector();
+            loadCurrentCaseIntoForm();
+        }
+
+        // Populate Dropdown for active case selection
+        function populateCaseSelector() {
+            const selectEl = document.getElementById('select-active-case');
+            const graphSingleSelect = document.getElementById('graph-single-case-select');
+            
+            selectEl.innerHTML = '';
+            graphSingleSelect.innerHTML = '';
+
+            // Ensure case list is sorted numerically
+            const sorted = [...casesData].sort((a, b) => a.caseNum - b.caseNum);
+
+            sorted.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.caseNum;
+                opt.textContent = `Case #${c.caseNum} (Patient ID: ${c.patientId} - ${c.eye})`;
+                if (c.caseNum == currentCaseNum) opt.selected = true;
+                selectEl.appendChild(opt);
+
+                const optGraph = opt.cloneNode(true);
+                graphSingleSelect.appendChild(optGraph);
+            });
+        }
+
+        function onCaseSelectChange(val) {
+            currentCaseNum = parseInt(val, 10);
+            loadCurrentCaseIntoForm();
+        }
+
+        // Get active case record reference
+        function getCurrentCase() {
+            return casesData.find(c => c.caseNum == currentCaseNum);
+        }
+
+        // Load Current Case into UI Inputs
+        function loadCurrentCaseIntoForm() {
+            const caseObj = getCurrentCase();
+            if (!caseObj) return;
+
+            // Header Info
+            document.getElementById('display-case-num').innerText = caseObj.caseNum;
+            document.getElementById('badge-patient-id').innerText = `Patient ID: ${caseObj.patientId}`;
+            
+            document.getElementById('input-case-number').value = caseObj.caseNum;
+            document.getElementById('input-patient-id').value = caseObj.patientId;
+            document.getElementById('input-dob').value = caseObj.dob || '';
+            document.getElementById('input-gender').value = caseObj.gender || 'M';
+            document.getElementById('input-surgery-date').value = caseObj.surgeryDate || '';
+            document.getElementById('input-eye').value = caseObj.eye || 'OD';
+            document.getElementById('input-diagnosis').value = caseObj.diagnosis || 'Cataract';
+
+            // Pre-op
+            document.getElementById('preop-iop').value = caseObj.preop?.iop ?? '';
+            document.getElementById('preop-va').value = caseObj.preop?.va ?? '';
+            document.getElementById('preop-meds').value = caseObj.preop?.meds ?? '';
+            document.getElementById('biometry-axl').value = caseObj.preop?.axl ?? '';
+            document.getElementById('biometry-acd').value = caseObj.preop?.acd ?? '';
+            document.getElementById('biometry-aim').value = caseObj.preop?.aim ?? '';
+            document.getElementById('biometry-implant').value = caseObj.preop?.implant ?? '';
+
+            // Intra-op
+            document.getElementById('intraop-procedure').value = caseObj.intraop?.procedure || 'CEIOL';
+            document.getElementById('intraop-migs').value = caseObj.intraop?.migs || 'None';
+            document.getElementById('intraop-notes').value = caseObj.intraop?.notes || '';
+
+            // Post-op Table
+            document.getElementById('chart-iop-pre').value = caseObj.preop?.iop ?? '';
+            document.getElementById('chart-iop-d1').value = caseObj.postop?.iop?.d1 ?? '';
+            document.getElementById('chart-iop-m1').value = caseObj.postop?.iop?.m1 ?? '';
+            document.getElementById('chart-iop-m3').value = caseObj.postop?.iop?.m3 ?? '';
+            document.getElementById('chart-iop-y1').value = caseObj.postop?.iop?.y1 ?? '';
+            document.getElementById('chart-iop-y3').value = caseObj.postop?.iop?.y3 ?? '';
+
+            document.getElementById('chart-va-pre').value = caseObj.preop?.va ?? '';
+            document.getElementById('chart-va-d1').value = caseObj.postop?.va?.d1 ?? '';
+            document.getElementById('chart-va-m1').value = caseObj.postop?.va?.m1 ?? '';
+            document.getElementById('chart-va-m3').value = caseObj.postop?.va?.m3 ?? '';
+            document.getElementById('chart-va-y1').value = caseObj.postop?.va?.y1 ?? '';
+            document.getElementById('chart-va-y3').value = caseObj.postop?.va?.y3 ?? '';
+
+            document.getElementById('chart-se-m1').value = caseObj.postop?.se?.m1 ?? '';
+
+            document.getElementById('chart-meds-pre').value = caseObj.preop?.meds ?? '';
+            document.getElementById('chart-meds-m1').value = caseObj.postop?.meds?.m1 ?? '';
+            document.getElementById('chart-meds-m3').value = caseObj.postop?.meds?.m3 ?? '';
+            document.getElementById('chart-meds-y1').value = caseObj.postop?.meds?.y1 ?? '';
+            document.getElementById('chart-meds-y3').value = caseObj.postop?.meds?.y3 ?? '';
+
+            document.getElementById('postop-complications').value = caseObj.postop?.complications || 'Uneventful Recovery';
+            document.getElementById('postop-complications-other').value = caseObj.postop?.complicationsOther || '';
+
+            handleComplicationsChange();
+        }
+
+        // Save Current Inputs to Data Model
+        function saveCurrentCaseData() {
+            const caseObj = getCurrentCase();
+            if (!caseObj) return;
+
+            caseObj.dob = document.getElementById('input-dob').value;
+            caseObj.gender = document.getElementById('input-gender').value;
+            caseObj.surgeryDate = document.getElementById('input-surgery-date').value;
+            caseObj.eye = document.getElementById('input-eye').value;
+            caseObj.diagnosis = document.getElementById('input-diagnosis').value;
+
+            // Pre-op
+            caseObj.preop = caseObj.preop || {};
+            caseObj.preop.iop = parseNumberOrNull(document.getElementById('preop-iop').value);
+            caseObj.preop.va = parseNumberOrNull(document.getElementById('preop-va').value);
+            caseObj.preop.meds = parseNumberOrNull(document.getElementById('preop-meds').value);
+            caseObj.preop.axl = parseNumberOrNull(document.getElementById('biometry-axl').value);
+            caseObj.preop.acd = parseNumberOrNull(document.getElementById('biometry-acd').value);
+            caseObj.preop.aim = document.getElementById('biometry-aim').value;
+            caseObj.preop.implant = document.getElementById('biometry-implant').value;
+
+            // Intra-op
+            caseObj.intraop = caseObj.intraop || {};
+            caseObj.intraop.procedure = document.getElementById('intraop-procedure').value;
+            caseObj.intraop.migs = document.getElementById('intraop-migs').value;
+            caseObj.intraop.notes = document.getElementById('intraop-notes').value;
+
+            // Post-op
+            caseObj.postop = caseObj.postop || { iop: {}, va: {}, se: {}, meds: {} };
+            
+            caseObj.postop.iop = {
+                pre: caseObj.preop.iop,
+                d1: parseNumberOrNull(document.getElementById('chart-iop-d1').value),
+                m1: parseNumberOrNull(document.getElementById('chart-iop-m1').value),
+                m3: parseNumberOrNull(document.getElementById('chart-iop-m3').value),
+                y1: parseNumberOrNull(document.getElementById('chart-iop-y1').value),
+                y3: parseNumberOrNull(document.getElementById('chart-iop-y3').value)
+            };
+
+            caseObj.postop.va = {
+                pre: caseObj.preop.va,
+                d1: parseNumberOrNull(document.getElementById('chart-va-d1').value),
+                m1: parseNumberOrNull(document.getElementById('chart-va-m1').value),
+                m3: parseNumberOrNull(document.getElementById('chart-va-m3').value),
+                y1: parseNumberOrNull(document.getElementById('chart-va-y1').value),
+                y3: parseNumberOrNull(document.getElementById('chart-va-y3').value)
+            };
+
+            caseObj.postop.se = {
+                m1: document.getElementById('chart-se-m1').value
+            };
+
+            caseObj.postop.meds = {
+                pre: caseObj.preop.meds,
+                m1: parseNumberOrNull(document.getElementById('chart-meds-m1').value),
+                m3: parseNumberOrNull(document.getElementById('chart-meds-m3').value),
+                y1: parseNumberOrNull(document.getElementById('chart-meds-y1').value),
+                y3: parseNumberOrNull(document.getElementById('chart-meds-y3').value)
+            };
+
+            caseObj.postop.complications = document.getElementById('postop-complications').value;
+            caseObj.postop.complicationsOther = document.getElementById('postop-complications-other').value;
+
+            saveCasesToStorage();
+        }
+
+        // Helper to keep numbers clean
+        function parseNumberOrNull(val) {
+            if (val === '' || val === null || val === undefined) return null;
+            const n = parseFloat(val);
+            return isNaN(n) ? null : n;
+        }
+
+        // Sync Pre-op values automatically into Post-op Chart Pre-op column
+        function syncPreopToPostop() {
+            const preIop = document.getElementById('preop-iop').value;
+            const preVa = document.getElementById('preop-va').value;
+            const preMeds = document.getElementById('preop-meds').value;
+
+            document.getElementById('chart-iop-pre').value = preIop;
+            document.getElementById('chart-va-pre').value = preVa;
+            document.getElementById('chart-meds-pre').value = preMeds;
+        }
+
+        // Ensure sign format for Implant (D) and SE (D) fields (+/-)
+        function formatSignedInput(inputEl) {
+            let val = inputEl.value.trim();
+            if (!val) return;
+            const num = parseFloat(val);
+            if (!isNaN(num)) {
+                inputEl.value = (num >= 0 ? '+' : '') + num.toFixed(2);
+            }
+        }
+
+        // Update Case # or Patient ID manually
+        function updateCaseHeaderInfo() {
+            const newCaseNum = parseInt(document.getElementById('input-case-number').value, 10);
+            const newPatientId = parseInt(document.getElementById('input-patient-id').value, 10);
+
+            if (isNaN(newCaseNum) || isNaN(newPatientId)) return;
+
+            const caseObj = getCurrentCase();
+            if (caseObj) {
+                caseObj.caseNum = newCaseNum;
+                caseObj.patientId = newPatientId;
+                currentCaseNum = newCaseNum;
+
+                // Keep numerical order
+                casesData.sort((a, b) => a.caseNum - b.caseNum);
+                saveCasesToStorage();
+                populateCaseSelector();
+                document.getElementById('display-case-num').innerText = currentCaseNum;
+                document.getElementById('badge-patient-id').innerText = `Patient ID: ${newPatientId}`;
+            }
+        }
+
+        // Start a brand new Case file for the current Patient ID (Prefills Patient ID, DOB, Gender)
+        function createNewCaseForCurrentPatient() {
+            const activeCase = getCurrentCase();
+            const highestCase = casesData.reduce((max, c) => c.caseNum > max ? c.caseNum : max, 100);
+            const nextCaseNum = highestCase + 1;
+
+            const newCaseObj = {
+                caseNum: nextCaseNum,
+                patientId: activeCase ? activeCase.patientId : 5001,
+                dob: activeCase ? activeCase.dob : "",
+                gender: activeCase ? activeCase.gender : "M",
+                surgeryDate: new Date().toISOString().split('T')[0],
+                eye: "OD",
+                diagnosis: "Cataract",
+                preop: {},
+                intraop: { procedure: "CEIOL", migs: "None" },
+                postop: { iop: {}, va: {}, se: {}, meds: {}, complications: "Uneventful Recovery" }
+            };
+
+            casesData.push(newCaseObj);
+            casesData.sort((a, b) => a.caseNum - b.caseNum);
+            saveCasesToStorage();
+
+            currentCaseNum = nextCaseNum;
+            populateCaseSelector();
+            loadCurrentCaseIntoForm();
+        }
+
+        // Create entirely new patient case
+        function createNewBlankPatientCase() {
+            const highestCase = casesData.reduce((max, c) => c.caseNum > max ? c.caseNum : max, 100);
+            const highestPatient = casesData.reduce((max, c) => c.patientId > max ? c.patientId : max, 5000);
+            const nextCaseNum = highestCase + 1;
+            const nextPatientId = highestPatient + 1;
+
+            const newCaseObj = {
+                caseNum: nextCaseNum,
+                patientId: nextPatientId,
+                dob: "",
+                gender: "M",
+                surgeryDate: new Date().toISOString().split('T')[0],
+                eye: "OD",
+                diagnosis: "Cataract",
+                preop: {},
+                intraop: { procedure: "CEIOL", migs: "None" },
+                postop: { iop: {}, va: {}, se: {}, meds: {}, complications: "Uneventful Recovery" }
+            };
+
+            casesData.push(newCaseObj);
+            casesData.sort((a, b) => a.caseNum - b.caseNum);
+            saveCasesToStorage();
+
+            currentCaseNum = nextCaseNum;
+            populateCaseSelector();
+            loadCurrentCaseIntoForm();
+        }
+
+        // Case Deletion Protection Guard
+        function promptDeleteCurrentCase() {
+            if (casesData.length <= 1) {
+                alert("Cannot delete the only remaining surgical case file.");
+                return;
+            }
+            caseToDeleteNum = currentCaseNum;
+            document.getElementById('delete-modal-case-text').innerText = `Case #${caseToDeleteNum}`;
+            document.getElementById('delete-modal').classList.remove('hidden');
+            document.getElementById('delete-modal').classList.add('flex');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.add('hidden');
+            document.getElementById('delete-modal').classList.remove('flex');
+            caseToDeleteNum = null;
+        }
+
+        function confirmDeleteCase() {
+            if (!caseToDeleteNum) return;
+            casesData = casesData.filter(c => c.caseNum !== caseToDeleteNum);
+            saveCasesToStorage();
+            closeDeleteModal();
+            selectHighestCaseOrDefault();
+        }
+
+        // Dynamic Complication "Other" textarea toggle
+        function handleComplicationsChange() {
+            const compVal = document.getElementById('postop-complications').value;
+            const container = document.getElementById('complications-other-container');
+            if (compVal === 'Other') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+            saveCurrentCaseData();
+        }
+
+        // Main Navigation Switching
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 text-slate-300 hover:text-white hover:bg-slate-800";
+            });
+            document.getElementById(`nav-${tabId}`).className = "nav-btn px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 bg-teal-600 text-white shadow";
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            if (tabId === 'progress') {
+                renderCharts();
+            } else if (tabId === 'search') {
+                renderSearchResults();
+            }
+        }
+
+        // Sub-Navigation (Workflow) Switching
+        function switchSubTab(subTabId) {
+            activeSubTab = subTabId;
+            document.querySelectorAll('.subnav-btn').forEach(btn => {
+                btn.className = "subnav-btn flex-1 py-3 px-4 font-semibold text-sm text-center border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all";
+            });
+            document.getElementById(`subnav-${subTabId}`).className = "subnav-btn flex-1 py-3 px-4 font-semibold text-sm text-center border-b-2 border-teal-600 text-teal-700 bg-white transition-all";
+
+            document.querySelectorAll('.subtab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(`subtab-${subTabId}`).classList.remove('hidden');
+        }
+
+        // ================= PROGRESS & CHARTING LOGIC =================
+
+        function setGraphMode(mode) {
+            graphMode = mode;
+            const btnAll = document.getElementById('graph-mode-all');
+            const btnFilter = document.getElementById('graph-mode-filter');
+            const btnSingle = document.getElementById('graph-mode-single');
+            const filtersBar = document.getElementById('graph-filters-bar');
+            const singleSelect = document.getElementById('graph-single-case-select');
+
+            // Reset tab styles
+            [btnAll, btnFilter, btnSingle].forEach(b => b.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900");
+            filtersBar.classList.add('hidden');
+            singleSelect.classList.add('hidden');
+
+            if (mode === 'all') {
+                btnAll.className = "px-3 py-1.5 rounded-md bg-white text-teal-700 shadow-sm font-bold";
+            } else if (mode === 'filter') {
+                btnFilter.className = "px-3 py-1.5 rounded-md bg-white text-teal-700 shadow-sm font-bold";
+                filtersBar.classList.remove('hidden');
+            } else if (mode === 'single') {
+                btnSingle.className = "px-3 py-1.5 rounded-md bg-white text-teal-700 shadow-sm font-bold";
+                singleSelect.classList.remove('hidden');
+            }
+
+            renderCharts();
+        }
+
+        function calculateAge(dobStr) {
+            if (!dobStr) return null;
+            const birthDate = new Date(dobStr);
+            const diff = Date.now() - birthDate.getTime();
+            const ageDate = new Date(diff);
+            return Math.abs(ageDate.getUTCFullYear() - 1970);
+        }
+
+        function getFilteredCasesForGraph() {
+            if (graphMode === 'all') {
+                return casesData;
+            } else if (graphMode === 'single') {
+                const selectedCaseNum = parseInt(document.getElementById('graph-single-case-select').value, 10);
+                return casesData.filter(c => c.caseNum === selectedCaseNum);
+            } else if (graphMode === 'filter') {
+                const g = document.getElementById('filter-gender').value;
+                const d = document.getElementById('filter-diagnosis').value;
+                const p = document.getElementById('filter-procedure').value;
+                const e = document.getElementById('filter-eye').value;
+                const a = document.getElementById('filter-age').value;
+
+                return casesData.filter(c => {
+                    if (g && c.gender !== g) return false;
+                    if (d && c.diagnosis !== d) return false;
+                    if (p && c.intraop?.procedure !== p) return false;
+                    if (e && c.eye !== e) return false;
+                    if (a) {
+                        const age = calculateAge(c.dob);
+                        if (age === null) return false;
+                        if (a === 'under60' && age >= 60) return false;
+                        if (a === '60to75' && (age < 60 || age > 75)) return false;
+                        if (a === 'over75' && age <= 75) return false;
+                    }
+                    return true;
+                });
+            }
+            return casesData;
+        }
+
+        function computeMetricAverages(subset, metricKey) {
+            const timepoints = ['pre', 'd1', 'm1', 'm3', 'y1', 'y3'];
+            const averages = [];
+
+            timepoints.forEach(tp => {
+                let sum = 0;
+                let count = 0;
+
+                subset.forEach(c => {
+                    let val = null;
+                    if (metricKey === 'iop') val = c.postop?.iop?.[tp] ?? (tp === 'pre' ? c.preop?.iop : null);
+                    if (metricKey === 'va') val = c.postop?.va?.[tp] ?? (tp === 'pre' ? c.preop?.va : null);
+                    if (metricKey === 'meds') val = c.postop?.meds?.[tp] ?? (tp === 'pre' ? c.preop?.meds : null);
+
+                    if (val !== null && val !== undefined && !isNaN(val)) {
+                        sum += parseFloat(val);
+                        count++;
+                    }
+                });
+
+                averages.push(count > 0 ? (sum / count).toFixed(1) : null);
+            });
+
+            return averages;
+        }
+
+        function renderCharts() {
+            const subset = getFilteredCasesForGraph();
+            const timeLabels = ['Pre-op', 'Day 1', 'Month 1', 'Month 3', 'Year 1', 'Year 3'];
+
+            const iopData = computeMetricAverages(subset, 'iop');
+            const vaData = computeMetricAverages(subset, 'va');
+            const medsData = computeMetricAverages(subset, 'meds');
+
+            // Destroy existing chart instances if re-rendering
+            if (iopChartInstance) iopChartInstance.destroy();
+            if (vaChartInstance) vaChartInstance.destroy();
+            if (medsChartInstance) medsChartInstance.destroy();
+
+            // IOP Chart
+            const ctxIop = document.getElementById('chart-iop-canvas').getContext('2d');
+            iopChartInstance = new Chart(ctxIop, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Mean IOP (mmHg)',
+                        data: iopData,
+                        borderColor: '#0d9488',
+                        backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        spanGaps: true
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // VA Chart
+            const ctxVa = document.getElementById('chart-va-canvas').getContext('2d');
+            vaChartInstance = new Chart(ctxVa, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Mean VA Denominator (20/X)',
+                        data: vaData,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        spanGaps: true
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Meds Chart
+            const ctxMeds = document.getElementById('chart-meds-canvas').getContext('2d');
+            medsChartInstance = new Chart(ctxMeds, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Mean Meds Count',
+                        data: medsData,
+                        borderColor: '#d97706',
+                        backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        spanGaps: true
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // ================= SEARCH TAB LOGIC =================
+
+        function renderSearchResults() {
+            const query = (document.getElementById('search-query-input').value || '').toLowerCase().trim();
+            const tbody = document.getElementById('search-results-tbody');
+            tbody.innerHTML = '';
+
+            const filtered = casesData.filter(c => {
+                if (!query) return true;
+                return (
+                    c.caseNum.toString().includes(query) ||
+                    c.patientId.toString().includes(query) ||
+                    (c.dob && c.dob.toLowerCase().includes(query)) ||
+                    (c.surgeryDate && c.surgeryDate.toLowerCase().includes(query)) ||
+                    (c.diagnosis && c.diagnosis.toLowerCase().includes(query)) ||
+                    (c.intraop?.procedure && c.intraop.procedure.toLowerCase().includes(query)) ||
+                    (c.eye && c.eye.toLowerCase().includes(query))
+                );
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="py-6 text-center text-slate-400">No surgical cases match your search query.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-bold text-slate-900">#${c.caseNum}</td>
+                    <td class="py-3 px-4 font-semibold text-teal-700">${c.patientId}</td>
+                    <td class="py-3 px-4 text-slate-600">${c.dob || '--'}</td>
+                    <td class="py-3 px-4 text-slate-600">${c.gender || '--'}</td>
+                    <td class="py-3 px-4 text-slate-600">${c.surgeryDate || '--'}</td>
+                    <td class="py-3 px-4 font-medium text-slate-800">${c.eye || '--'}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">${c.diagnosis || '--'}</span></td>
+                    <td class="py-3 px-4 text-slate-600 text-xs">${c.intraop?.procedure || '--'}</td>
+                    <td class="py-3 px-4 text-right space-x-2">
+                        <button onclick="loadAndSwitchToCase(${c.caseNum})" class="bg-teal-50 text-teal-700 hover:bg-teal-100 px-2.5 py-1 rounded font-semibold text-xs transition-colors">View / Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function loadAndSwitchToCase(caseNum) {
+            currentCaseNum = caseNum;
+            populateCaseSelector();
+            loadCurrentCaseIntoForm();
+            switchTab('case-log');
+        }
+    </script>
+</body>
+</html>
